@@ -1,0 +1,2 @@
+简单的OA系统；
+实现菜单权限、POI导入导出Excel、highchart生成图表、activiti工作流

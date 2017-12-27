@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cjrj.mapper.UserMapper">
+
+<resultMap type="com.cjrj.model.User" id="UserResult"></resultMap>
+<resultMap type="com.cjrj.model.SysMenu" id="SysMenuResult"></resultMap>
+<resultMap type="com.cjrj.model.Tree" id="TreeResult"></resultMap>
+<resultMap type="com.cjrj.model.Dept" id="DeptResult"></resultMap>
+<resultMap type="com.cjrj.model.Role" id="RoleResult"></resultMap>
+<!--用户登录。查询了 用户表，部门表  -->
+<select id="getUserLoginByname" parameterType="String" resultMap="UserResult">
+select * from mod_user u,mod_dept t where  u.udept_id=t.dept_id and u.user_account=#{user_account}
+</select>
+
+
+
+<!-- 根据用户的角色id查询菜单  -->
+<select id="getMenuByURoleId" parameterType="Integer" resultMap="SysMenuResult">
+select s.menu_name,s.parentid,s.iconcls,s.url,s.memu_seq,s.menu_id,
+(select count(m.parentid) from sysmenu m where m.parentid !=0 and m.parentid=s.menu_id)as childcount from 
+sysmenu s, role_menu rm, mod_role r
+where s.menu_enable=0 and s.menu_id=rm.menu_id and rm.role_id=r.role_id and r.role_id=#{role_id}
+and s.menu_id not in
+(select s.menu_id  from sysmenu s where s.menu_enable=1 and s.parentid=0 and s.parentid=s.menu_id)
+group by s.menu_name,s.parentid,s.iconcls,s.url,s.menu_enable,s.memu_seq,s.menu_id
+order by s.memu_seq
+</select>
+
+<!--查找 所有用户信息  用户表，部门表  -->
+<select id="getUserList" parameterType="map" resultMap="UserResult">
+select * from (select u.*,d.*,rownum rn from mod_user u left join mod_dept d on u.udept_id=d.dept_id
+)where rn &gt;#{stime}  and rn &lt;=#{etime} order by user_id desc
+</select>
+
+<!--统计数量 所有用户信息  用户表，部门表  -->
+<select id="getUserCount"  resultType="int">
+select count(*) from (select u.*,d.*,rownum rn from mod_user u left join mod_dept d on u.udept_id=d.dept_id
+order by u.user_id)
+</select>
+
+<!-- 查找部门表所有部门表 -->
+<select id="getDeptList" resultMap="DeptResult">
+select * from mod_dept
+</select>
+
+<!-- 查找角色表所有角色信息 -->
+<select id="getRoleList" resultMap="RoleResult">
+select * from mod_role
+</select>
+
+
+<!-- 根据添加的用户信息添加用户角色表 -->
+<insert id="addUser_role" parameterType="map" >
+<selectKey keyProperty="id" order="BEFORE" resultType="Integer">
+select user_role.nextval from dual
+</selectKey>
+   insert into mod_user_role values(#{id},#{user_id},#{role_id})
+</insert>
+
+<!-- 查找添加的用户的id -->
+<select id="getUserId" resultMap="UserResult">
+select * from mod_user u order by u.create_date desc
+</select>
+
+<!--根据用户id删除用户表信息  -->
+<delete id="deleteByUser_id" parameterType="Integer">
+delete from mod_user where user_id=#{user_id} 
+</delete>
+
+<!--根据用户id删除用户角色表  -->
+<delete id="deleteUser_roleByUid">
+delete from mod_user_role where user_id=#{user_id}
+</delete>
+
+
+<!-- 查找用户的id查找用户角色表的角色id -->
+<select id="getRoleByUser_id" parameterType="Integer" resultMap="RoleResult">
+select * from mod_user_role ur,mod_role r where r.role_id=ur.role_id and ur.user_id=#{user_id}
+</select>
+
+<!-- 更新用户密码 -->
+<update id="upUserPass" parameterType="map">
+update mod_user set pass=#{pass} where user_account=#{user_account}
+</update>
+
+
+<select id="getUserByCon" parameterType="map" resultMap="UserResult">
+select * from (select u.*,d.* from mod_user u left join mod_dept d on u.udept_id=d.dept_id
+<where>
+<if test="name!=null and name!=''">
+and u.user_name like concat(concat('%',#{name}),'%')
+</if>
+<if test="address!=null and address!=''">
+and u.user_address like concat(concat('%',#{address}),'%')
+</if>
+</where>
+)  order by user_id 
+</select>
+
+<select id="getCountByCon" parameterType="map" resultType="int">
+select count(*) from (select u.*,d.* from mod_user u left join mod_dept d on u.udept_id=d.dept_id
+<where>
+<if test="name!=null and name!=''">
+and u.user_name like concat(concat('%',#{name}),'%')
+</if>
+<if test="address!=null and address!=''">
+and u.user_address like concat(concat('%',#{address}),'%')
+</if>
+</where>
+)
+</select>
+
+
+<!--查找 所有用户信息  用户表，部门表  -->
+<select id="getUserDeptList" resultMap="UserResult">
+select * from (select u.*,d.* from mod_user u left join mod_dept d on u.udept_id=d.dept_id
+)  order by user_id 
+</select>
+
+
+<!--根据用户id查找 所有用户信息  用户表，部门表  -->
+<select id="getUserDeptByUser_id" resultMap="UserResult">
+select * from (select u.*,d.* from mod_user u left join mod_dept d on u.udept_id=d.dept_id where u.user_id=#{user_id}
+)  order by user_id 
+</select>
+
+
+
+
+
+
+
+
+
+
+
+<!-- 找父节点 -->
+<select id="findById"  parameterType="Integer" resultMap="SysMenuResult">
+select s.menu_name,s.parentid,s.iconcls,s.url,s.memu_seq,s.menu_id from 
+sysmenu s, role_menu rm, mod_role r
+where s.menu_enable=0 and s.parentid=0 and s.menu_id=rm.menu_id and rm.role_id=r.role_id and r.role_id=#{role_id}
+group by s.menu_name,s.parentid,s.iconcls,s.url,s.menu_enable,s.memu_seq,s.menu_id
+order by s.memu_seq
+
+</select>
+
+<!-- 子节点 -->
+<select id="findByPid"  parameterType="map" resultMap="SysMenuResult">
+<!-- select s.menu_name,s.parentid,s.iconcls,s.url,s.memu_seq,s.menu_id from 
+sysmenu s
+where s.parentid=#{parentid} and s.menu_enable=0
+group by s.menu_name,s.parentid,s.iconcls,s.url,s.menu_enable,s.memu_seq,s.menu_id
+order by s.memu_seq
+ -->
+ 
+select s.menu_name,s.parentid,s.iconcls,s.url,s.memu_seq,s.menu_id from sysmenu s
+where s.parentid=#{parentid} and s.menu_enable=0 and s.menu_id in
+ (select s.menu_id from 
+sysmenu s, role_menu rm, mod_role r,mod_user_role ur,mod_user u
+where s.menu_enable=0 and s.parentid !=0 and s.menu_id=rm.menu_id and rm.role_id=r.role_id and r.role_id=ur.role_id
+and ur.user_id=#{user_id})
+group by s.menu_name,s.parentid,s.iconcls,s.url,s.menu_enable,s.memu_seq,s.menu_id
+order by s.memu_seq
+ 
+</select>
+</mapper>
